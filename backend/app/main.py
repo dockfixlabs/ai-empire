@@ -72,6 +72,10 @@ app.include_router(agent_control.router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
+    if STATIC_DIR.exists():
+        index = STATIC_DIR / "index.html"
+        if index.exists():
+            return FileResponse(str(index))
     return {
         "name": settings.app_name,
         "version": settings.version,
