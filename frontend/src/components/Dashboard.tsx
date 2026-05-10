@@ -78,7 +78,7 @@ export function Dashboard({ user }: { user: any }) {
 
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const ws = new WebSocket(`${protocol}//localhost:8000/api/v1/agents/ws`)
+    const ws = new WebSocket(`${protocol}//${window.location.host}/api/v1/agents/ws`)
     wsRef.current = ws
     ws.onopen = () => setWsConnected(true)
     ws.onclose = () => setWsConnected(false)
