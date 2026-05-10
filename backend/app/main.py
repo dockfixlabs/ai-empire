@@ -7,7 +7,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, func
 from app.core.config import get_settings
 from app.core.database import init_db, close_db, get_session_factory
@@ -46,6 +47,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+STATIC_DIR = Path(__file__).parent.parent / "static"
+if STATIC_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
 
 
 @app.exception_handler(Exception)
@@ -136,3 +141,13 @@ async def system_status():
         "total_activities": total_activities,
         "scheduler_active": _scheduler_task is not None and not _scheduler_task.done(),
     }
+
+
+if STATIC_DIR.exists():
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        index = STATIC_DIR / "index.html"
+        if index.exists():
+            return FileResponse(str(index))
+        return JSONResponse({"detail": "Not found"}, status_code=404)
