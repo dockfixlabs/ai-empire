@@ -30,3 +30,6 @@ dist/
 build/
 .DS_Store
 Thumbs.db
+
+# Override: include frontend dist for Railway deployment
+!frontend/dist/
