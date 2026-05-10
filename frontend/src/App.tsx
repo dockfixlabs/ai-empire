@@ -14,22 +14,33 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [authLoading, setAuthLoading] = useState(true)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (token) {
-      setIsLoggedIn(true)
-      fetch('/api/v1/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(r => r.json())
-        .then(u => setUser(u))
-        .catch(() => {
-          localStorage.removeItem('token')
-          setIsLoggedIn(false)
-        })
+    if (!token) {
+      setAuthLoading(false)
+      return
     }
+    fetch('/api/v1/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => { if (!r.ok) throw new Error(); return r.json() })
+      .then(u => { setUser(u); setIsLoggedIn(true); setAuthLoading(false) })
+      .catch(() => {
+        localStorage.removeItem('token')
+        setIsLoggedIn(false)
+        setAuthLoading(false)
+      })
   }, [])
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   const handleLogin = (token: string, userData: any) => {
     localStorage.setItem('token', token)
