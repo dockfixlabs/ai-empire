@@ -260,7 +260,7 @@ class SEOEmpireEngine:
                - Comparison articles vs competitors
             
             3. PROGRAMMATIC SEO:
-               - Auto-generated landing pages for {city/industry}+{service}
+                - Auto-generated landing pages for {{city/industry}}+{{service}}
                - Template with dynamic variables
                - Structured data for rich results
                - Local SEO if applicable
