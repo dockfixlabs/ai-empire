@@ -112,10 +112,11 @@ async def gumroad_callback(
 
 @router.get("/products")
 async def get_gumroad_products(user: User = Depends(get_current_user)):
-    if not user.gumroad_token:
-        raise HTTPException(status_code=400, detail="Gumroad not connected.")
+    token = user.gumroad_token or settings.gumroad_api_key
+    if not token:
+        raise HTTPException(status_code=400, detail="Gumroad not connected. Set GUMROAD_API_KEY or connect via OAuth.")
 
-    gumroad = GumroadService(access_token=user.gumroad_token)
+    gumroad = GumroadService(access_token=token)
     try:
         products = await gumroad.get_products()
         return {"products": products, "count": len(products)}
@@ -127,10 +128,11 @@ async def get_gumroad_products(user: User = Depends(get_current_user)):
 
 @router.get("/sales")
 async def get_gumroad_sales(product_id: str = None, user: User = Depends(get_current_user)):
-    if not user.gumroad_token:
+    token = user.gumroad_token or settings.gumroad_api_key
+    if not token:
         raise HTTPException(status_code=400, detail="Gumroad not connected.")
 
-    gumroad = GumroadService(access_token=user.gumroad_token)
+    gumroad = GumroadService(access_token=token)
     try:
         sales = await gumroad.get_sales(product_id)
         return {"sales": sales, "count": len(sales)}
@@ -140,10 +142,11 @@ async def get_gumroad_sales(product_id: str = None, user: User = Depends(get_cur
 
 @router.post("/sync")
 async def sync_from_gumroad(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    if not user.gumroad_token:
+    token = user.gumroad_token or settings.gumroad_api_key
+    if not token:
         raise HTTPException(status_code=400, detail="Gumroad not connected.")
 
-    gumroad = GumroadService(access_token=user.gumroad_token)
+    gumroad = GumroadService(access_token=token)
     try:
         products = await gumroad.get_products()
         synced = 0
