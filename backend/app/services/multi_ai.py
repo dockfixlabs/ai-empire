@@ -85,7 +85,7 @@ class MultiAIService:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": settings.groq_model or "llama3-70b-8192",
+                    "model": settings.groq_model or "llama-3.3-70b-versatile",
                     "messages": messages,
                     "temperature": temperature,
                     "max_tokens": max_tokens,

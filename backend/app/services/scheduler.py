@@ -115,7 +115,7 @@ async def run_scheduled_agent(agent_name: str, user: User):
             act = result_entry.scalar_one_or_none()
             if act:
                 act.status = "completed" if not error else "failed"
-                act.output_preview = str(result)[:500] if result else None
+                act.output_data = str(result)[:1000] if result else None
                 act.error_message = error
                 act.duration_ms = 0
                 await db.commit()
