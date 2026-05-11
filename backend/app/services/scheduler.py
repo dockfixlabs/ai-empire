@@ -11,33 +11,35 @@ from app.services.innovation.engine import InnovationMarketingEngine
 from app.services.multi_ai import MultiAIService
 
 SCHEDULE_CONFIG: Dict[str, dict] = {
-    "market_research": {"interval_hours": 1, "label": "أبحاث السوق"},
-    "email_3d": {"interval_hours": 2, "label": "Email 3D"},
-    "seo_empire": {"interval_hours": 3, "label": "SEO Empire"},
-    "launch": {"interval_hours": 4, "label": "Launch"},
-    "viral_referral": {"interval_hours": 4, "label": "Viral Referral"},
-    "interactive": {"interval_hours": 4, "label": "Interactive"},
-    "partnership": {"interval_hours": 3, "label": "Partnership"},
-    "community": {"interval_hours": 2, "label": "Community"},
-    "pricing": {"interval_hours": 6, "label": "Pricing"},
-    "content": {"interval_hours": 2, "label": "Content"},
-    "trend_jacker": {"interval_hours": 1, "label": "Trend Jacker"},
-    "neuromarketing": {"interval_hours": 3, "label": "Neuromarketing"},
+    "market_research": {"interval_hours": 2, "label": "أبحاث السوق"},
+    "email_3d": {"interval_hours": 4, "label": "Email 3D"},
+    "seo_empire": {"interval_hours": 4, "label": "SEO Empire"},
+    "launch": {"interval_hours": 6, "label": "Launch"},
+    "viral_referral": {"interval_hours": 6, "label": "Viral Referral"},
+    "interactive": {"interval_hours": 6, "label": "Interactive"},
+    "partnership": {"interval_hours": 4, "label": "Partnership"},
+    "community": {"interval_hours": 3, "label": "Community"},
+    "pricing": {"interval_hours": 8, "label": "Pricing"},
+    "content": {"interval_hours": 3, "label": "Content"},
+    "trend_jacker": {"interval_hours": 2, "label": "Trend Jacker"},
+    "neuromarketing": {"interval_hours": 4, "label": "Neuromarketing"},
 }
 
 _running = False
 
+GROQ_SEMAPHORE = asyncio.Semaphore(2)
+
 AGENT_PROMPTS = {
-    "market_research": "Analyze current market trends and opportunities for Gumroad digital products. Identify gaps and emerging niches.",
-    "launch": "Create a multi-platform product launch strategy for Gumroad products (Product Hunt, Hacker News, Betalist, etc).",
-    "viral_referral": "Design a viral referral campaign with tiered rewards, gamification, and affiliate mechanics.",
-    "interactive": "Design an interactive content experience with ROI calculator, assessment quiz, and lead capture.",
-    "partnership": "Identify and design partnership outreach strategy with complementary Gumroad creators and newsletter owners.",
+    "market_research": "Analyze current market trends for Gumroad digital products. Identify gaps and niches.",
+    "launch": "Create a multi-platform product launch strategy for Gumroad products.",
+    "viral_referral": "Design a viral referral campaign with tiered rewards and affiliate mechanics.",
+    "interactive": "Design an interactive content experience with ROI calculator and lead capture.",
+    "partnership": "Design partnership outreach strategy with Gumroad creators and newsletter owners.",
     "community": "Design community engagement strategies, ambassador programs, and UGC campaigns.",
-    "pricing": "Analyze pricing optimization opportunities based on market positioning and competitor analysis.",
-    "content": "Design a content strategy including SEO-optimized articles, lead magnets, and content upgrades.",
+    "pricing": "Analyze pricing optimization opportunities based on market positioning.",
+    "content": "Design a content strategy including SEO-optimized articles and lead magnets.",
     "trend_jacker": "Identify current trending topics and create a trend-jacking content strategy.",
-    "neuromarketing": "Apply neuromarketing principles to optimize product pages, CTAs, and email sequences.",
+    "neuromarketing": "Apply neuromarketing principles to optimize product pages and CTAs.",
 }
 
 
@@ -67,36 +69,40 @@ async def run_scheduled_agent(agent_name: str, user: User):
         except Exception as e:
             print(f"[Scheduler] Log start error: {e}")
 
-    # Generate AI content (no DB session held during AI call)
+    # Generate AI content with rate-limit awareness (no DB session held during AI call)
     result = None
     error = None
     try:
         prompt = AGENT_PROMPTS.get(agent_name)
         if prompt:
-            ai = MultiAIService()
-            raw = await ai.chat(
-                messages=[
-                    {"role": "system", "content": "أنت خبير تسويق رقمي. استخدم العربية في الرد. قدم تحليلاً مفصلاً."},
-                    {"role": "user", "content": f"{prompt}\n\nقدم استراتيجية قابلة للتنفيذ خطوة بخطوة."},
-                ],
-                temperature=0.7,
-                max_tokens=2000,
-            )
+            async with GROQ_SEMAPHORE:
+                await asyncio.sleep(2)
+                ai = MultiAIService()
+                raw = await ai.chat(
+                    messages=[
+                        {"role": "system", "content": "أنت خبير تسويق رقمي. أجب باختصار بالعربية."},
+                        {"role": "user", "content": f"{prompt}\n\nأعط 3-5 نقاط عملية."},
+                    ],
+                    temperature=0.7,
+                    max_tokens=500,
+                )
             result = {"content": raw, "agent": agent_name, "status": "completed"}
         elif agent_name in ("email_3d", "seo_empire"):
             engine = InnovationMarketingEngine(user_id=user.id)
             product = {"name": "Gumroad Product", "price": 29.99, "description": "Digital product"}
             result = await engine.execute_channel(agent_name, product)
         else:
-            ai = MultiAIService()
-            raw = await ai.chat(
-                messages=[
-                    {"role": "system", "content": "أنت خبير تسويق رقمي متخصص."},
-                    {"role": "user", "content": f"اعمل تحليل واستراتيجية كـ {config.get('label', agent_name)}. قدم recommendations قابلة للتنفيذ."},
-                ],
-                temperature=0.7,
-                max_tokens=1500,
-            )
+            async with GROQ_SEMAPHORE:
+                await asyncio.sleep(2)
+                ai = MultiAIService()
+                raw = await ai.chat(
+                    messages=[
+                        {"role": "system", "content": "أنت خبير تسويق رقمي. أجب باختصار."},
+                        {"role": "user", "content": f"اعمل تحليل كـ {config.get('label', agent_name)}. أعط 3 نقاط."},
+                    ],
+                    temperature=0.7,
+                    max_tokens=500,
+                )
             result = {"content": raw, "agent": agent_name, "status": "completed"}
     except Exception as e:
         error = str(e)
